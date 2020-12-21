@@ -1,0 +1,179 @@
+import numpy as np
+from matplotlib import pyplot as plt
+import math
+
+def getMaterialProperties():
+    E = float(input("Enter elastic modulus of material in GPa: "))
+    r = float(input("Enter Poisson's ratio: "))
+    a = float(input("Enter lattice constant in nanometers: "))
+    type_crystal = int(input("Enter 0 if crystal type is FCC, 1 if crystal type is BCC and 2 if crystal type is SC: "))
+    return (E,r,a,type_crystal)
+
+def getBurgersVector(a,type_crystal):
+    bu = int(input("Enter first miller index of the burgers vector: "))
+    bv = int(input("Enter second miller index of the burgers vector: "))
+    if(type_crystal == 0 or type_crystal == 1):
+      b = np.array([(a*math.pow(10,-9)*bu)/2,(a*math.pow(10,-9)*bv)/2])
+    elif(type_crytal == 2):
+      b = np.array([(a*math.pow(10,-9)*bu),(a*math.pow(10,-9)*bv)])
+    return b
+
+def getExternalStressTensor_2D():
+    sigma_xx = int(input("Enter component of stress on x plane in x direction in Pascal: "))
+    sigma_yy = int(input("Enter component of stress on y plane in y direction in Pascal: "))
+    tau_xy = int(input("Enter component of stress on x plane in y direction in Pascal: "))
+    sigma = np.array([[sigma_xx,tau_xy],[tau_xy,sigma_yy]])
+    return sigma
+
+def getGlideForce(xlist,ylist,l):
+    (E,r,a,type_crystal) = getMaterialProperties()
+    sigma = getExternalStressTensor_2D()
+    TAU_xy = sigma[0][1] 
+    ne = int(input("Enter number of edge dislocations in X-Y glide plane: "))
+    
+    Fx = np.zeros((l,l), dtype = float) 
+  
+    for i in range(1,ne+1):
+        xlist_t = xlist
+        ylist_t = ylist
+        b = getBurgersVector(a,type_crystal)
+        b_m = math.sqrt(b[0]**2 + b[1]**2)
+        x0 = float(input("Enter x coordinate of initial position of edge dislocation: "))
+        y0 = float(input("Enter y coordinate of initial position of edge dislocation: "))
+        xlist_t = xlist_t - x0
+        ylist_t = ylist_t - y0
+        X, Y = np.meshgrid(xlist_t, ylist_t)
+        pn = int(input("Enter 0 if dislocation vector into XY plane and 1 if dislocation vector coming out of XY plane: "))
+        
+        Fx = Fx + (TAU_xy*b_m)
+        if (pn==0):
+            Fx = Fx + (-1)*(E*math.pow(10,9)*b_m*b_m*X*(np.power(X,2) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+        elif (pn==1):
+            Fx = Fx + (E*math.pow(10,9)*b_m*b_m*X*(np.power(X,2) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+    
+    for k in range(0,l):
+      for j in range(0,l):
+        if(math.isinf(Fx[k,j])):
+            Fx[k,j] = np.nan
+    
+    fig = plt.figure(figsize=(6,6))
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax = fig.add_axes([left, bottom, width, height]) 
+    cp = ax.contour(xlist, ylist, Fx)
+    ax.clabel(cp, inline=True, fontsize=10)
+    ax.set_title('Glide Force (Pa)')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    plt.show()
+        
+    return Fx
+
+def getClimbForce(xlist,ylist,l):
+    (E,r,a,type_crystal) = getMaterialProperties()
+    sigma = getExternalStressTensor_2D()
+    SIGMA_xx = sigma[0][0] 
+    ne = int(input("Enter number of edge dislocations in X-Y glide plane: "))
+    
+    Fy = np.zeros((l,l), dtype = float) 
+  
+    for i in range(1,ne+1):
+        xlist_t = xlist
+        ylist_t = ylist
+        b = getBurgersVector(a,type_crystal)
+        b_m = math.sqrt(b[0]**2 + b[1]**2)
+        x0 = float(input("Enter x coordinate of initial position of edge dislocation: "))
+        y0 = float(input("Enter y coordinate of initial position of edge dislocation: "))
+        xlist_t = xlist_t - x0
+        ylist_t = ylist_t - y0
+        X, Y = np.meshgrid(xlist_t, ylist_t)
+        pn = int(input("Enter 0 if dislocation vector into XY plane and 1 if dislocation vector coming out of XY plane: "))
+        
+        Fy = Fy - (SIGMA_xx*b_m)
+        if (pn==0):
+            Fy = Fy + (-1)*(E*math.pow(10,9)*b_m*b_m*Y*((3*np.power(X,2)) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+        elif (pn==1):
+            Fy = Fy + (E*math.pow(10,9)*b_m*b_m*Y*((3*np.power(X,2)) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+    
+    for k in range(0,l):
+      for j in range(0,l):
+        if(math.isinf(Fy[k,j])):
+            Fy[y,j] = np.nan
+    
+    fig = plt.figure(figsize=(6,6))
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    ax = fig.add_axes([left, bottom, width, height]) 
+    cp = ax.contour(xlist, ylist, Fy)
+    ax.clabel(cp, inline=True, fontsize=10)
+    ax.set_title('Climb Force (Pa)')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    plt.show()
+        
+    return Fy
+
+def getGlideAndClimbForce(xlist,ylist,l):
+    
+    (E,r,a,type_crystal) = getMaterialProperties()
+    sigma = getExternalStressTensor_2D()
+    TAU_xy = sigma[0][1] 
+    SIGMA_xx = sigma[0][0] 
+    ne = int(input("Enter number of edge dislocations in X-Y glide plane: "))
+    
+    Fx = np.zeros((l,l), dtype = float) 
+    Fy = np.zeros((l,l), dtype = float) 
+    
+    for i in range(1,ne+1):
+        xlist_t = xlist
+        ylist_t = ylist
+        b = getBurgersVector(a,type_crystal)
+        b_m = math.sqrt(b[0]**2 + b[1]**2)
+        x0 = float(input("Enter x coordinate of initial position of edge dislocation: "))
+        y0 = float(input("Enter y coordinate of initial position of edge dislocation: "))
+        xlist_t = xlist_t - x0
+        ylist_t = ylist_t - y0
+        X, Y = np.meshgrid(xlist_t, ylist_t)
+        pn = int(input("Enter 0 if dislocation vector into XY plane and 1 if dislocation vector coming out of XY plane: "))
+        
+        Fx = Fx + (TAU_xy*b_m)
+        Fy = Fy - (SIGMA_xx*b_m)
+        if (pn==0):
+            Fx = Fx + (-1)*(E*math.pow(10,9)*b_m*b_m*X*(np.power(X,2) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+            Fy = Fy + (-1)*(E*math.pow(10,9)*b_m*b_m*Y*((3*np.power(X,2)) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+        elif (pn==1):
+            Fx = Fx + (E*math.pow(10,9)*b_m*b_m*X*(np.power(X,2) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+            Fy = Fy + (E*math.pow(10,9)*b_m*b_m*Y*((3*np.power(X,2)) - np.power(Y,2))) / (4*math.pi*(1-(r**2))*(np.power((np.power(X,2)+np.power(Y,2)),2)))
+            
+    for k in range(0,l):
+      for j in range(0,l):
+        if(math.isinf(Fx[k,j])):
+            Fx[k,j] = np.nan
+        if(math.isinf(Fy[k,j])):
+            Fx[y,j] = np.nan
+            
+    left, bottom, width, height = 0.1, 0.1, 0.8, 0.8
+    
+    fig1 = plt.figure(figsize=(6,6))
+    ax1 = fig1.add_axes([left, bottom, width, height]) 
+    cp1 = ax1.contour(xlist, ylist, Fx)
+    ax1.clabel(cp1, inline=True, fontsize=10)
+    ax1.set_title('Glide Force (Pa)')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    plt.show()
+    
+    fig2 = plt.figure(figsize=(6,6))
+    ax2 = fig2.add_axes([left, bottom, width, height]) 
+    cp2 = ax2.contour(xlist, ylist, Fy)
+    ax2.clabel(cp2, inline=True, fontsize=10)
+    ax2.set_title('Climb Force (Pa)')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    plt.show()
+        
+    return (Fx,Fy)
+    
+l = 100 
+xlist = np.linspace(-0.5,0.5,num = l)
+ylist = np.linspace(-0.5,0.5,num = l)
+
+getGlideAndClimbForce(xlist,ylist,l)
